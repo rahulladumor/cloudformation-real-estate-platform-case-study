@@ -34,32 +34,33 @@ Complete serverless & containerized architecture using:
 
 ## 🏗️ Architecture
 
-```
-Users → CloudFront (CDN) → ALB → ECS Fargate
-                 ↓              ↓
-              WAF         Aurora MySQL
-                         (Read Replicas)
-                               ↓
-API Gateway → Lambda ← DynamoDB
-     ↓                    ↓
-OpenSearch          ElastiCache
-     ↓                    ↓
-  Cognito            S3 Storage
+### High-Level Architecture
+
+```mermaid
+graph TB
+    subgraph Users
+        Client[Users/Clients]
+    end
+    
+    subgraph AWS Cloud
+        VPC[VPC<br/>Multi-AZ]
+        ALB[Load Balancer<br/>High Availability]
+        EC2[EC2 Instances<br/>Auto Scaling]
+        DB[Database<br/>Multi-AZ]
+        S3[S3 Storage<br/>Encrypted]
+    end
+    
+    subgraph Monitoring
+        CW[CloudWatch<br/>Metrics & Logs]
+    end
+    
+    Client --> ALB
+    ALB --> EC2
+    EC2 --> DB
+    EC2 --> S3
+    EC2 --> CW
 ```
 
-### Key Components
-
-| Layer | Services | Purpose |
-|-------|----------|---------|
-| **Frontend** | CloudFront, S3, WAF | Static content, CDN, security |
-| **Application** | ECS Fargate, ALB | Containerized web app |
-| **API** | API Gateway, Lambda | Serverless APIs |
-| **Data** | Aurora, DynamoDB | Structured & NoSQL data |
-| **Cache** | ElastiCache Redis | Session & search caching |
-| **Search** | OpenSearch | Geospatial queries |
-| **Storage** | S3 | Images, 3D tours |
-| **Auth** | Cognito | User management |
-| **Compute** | Lambda | Image processing, tools |
 
 ## 🚀 Quick Deploy
 
