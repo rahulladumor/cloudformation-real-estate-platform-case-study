@@ -1,158 +1,185 @@
-# 🏗️ Real Estate Platform Architecture
+# Architecture Diagrams - Real Estate Platform
 
-## Overview
+Comprehensive Mermaid diagrams for the infrastructure.
 
-**Multi-tier, microservices-based architecture** combining serverless and containerized components for optimal performance and cost.
+## 1. Overall Architecture
 
-## Architecture Layers
+```mermaid
+graph TB
+    subgraph Users
+        Client[Users/Clients]
+    end
+    
+    subgraph AWS Cloud
+        VPC[VPC<br/>Multi-AZ]
+        ALB[Load Balancer<br/>High Availability]
+        EC2[EC2 Instances<br/>Auto Scaling]
+        DB[Database<br/>Multi-AZ]
+        S3[S3 Storage<br/>Encrypted]
+    end
+    
+    subgraph Monitoring
+        CW[CloudWatch<br/>Metrics & Logs]
+    end
+    
+    Client --> ALB
+    ALB --> EC2
+    EC2 --> DB
+    EC2 --> S3
+    EC2 --> CW
+```
 
-### 1. Frontend Layer (CDN)
-- **CloudFront**: Global CDN for static assets
-- **S3**: Storage for images, 3D tours
-- **WAF**: Protection against attacks
+## 2. Network Architecture
 
-### 2. Application Layer (Containers)
-- **ECS Fargate**: Containerized web application
-- **ALB**: Load balancing across tasks
-- **Auto Scaling**: Based on CPU/memory
+```mermaid
+graph LR
+    subgraph VPC
+        subgraph Public Subnets
+            Pub1[Public Subnet AZ-A]
+            Pub2[Public Subnet AZ-B]
+        end
+        
+        subgraph Private Subnets
+            Priv1[Private Subnet AZ-A]
+            Priv2[Private Subnet AZ-B]
+        end
+        
+        IGW[Internet Gateway]
+        NAT[NAT Gateway]
+    end
+    
+    IGW --> Pub1
+    IGW --> Pub2
+    Pub1 --> NAT
+    NAT --> Priv1
+    NAT --> Priv2
+```
 
-### 3. API Layer (Serverless)
-- **API Gateway**: RESTful APIs
-- **Lambda**: Mortgage calculator, image processing
-- **Cognito**: User authentication
+## 3. Security Architecture
 
-### 4. Data Layer
-- **Aurora MySQL**: Primary database + read replicas
-- **DynamoDB**: User data (favorites, history)
-- **ElastiCache Redis**: Caching & sessions
-- **OpenSearch**: Geospatial search engine
+```mermaid
+graph TB
+    subgraph Security Layers
+        WAF[WAF<br/>Web Application Firewall]
+        SG[Security Groups<br/>Firewall Rules]
+        NACL[Network ACLs<br/>Subnet Protection]
+        IAM[IAM Roles<br/>Access Control]
+        KMS[KMS Encryption<br/>Data Protection]
+    end
+    
+    WAF --> SG
+    SG --> NACL
+    NACL --> IAM
+    IAM --> KMS
+```
 
-### 5. Storage Layer
-- **S3**: Property images, documents
-- **CloudFront**: CDN delivery
-- **Lambda**: Image optimization
+## 4. Data Flow
 
-### 6. Communication Layer
-- **SES**: Email notifications
-- **EventBridge**: Event routing
-- **SNS**: Push notifications
+```mermaid
+sequenceDiagram
+    participant User
+    participant LB as Load Balancer
+    participant App as Application
+    participant DB as Database
+    participant S3 as S3 Storage
+    
+    User->>LB: 1. Request
+    LB->>App: 2. Route
+    App->>DB: 3. Query Data
+    DB-->>App: 4. Return Data
+    App->>S3: 5. Store Files
+    S3-->>App: 6. Confirm
+    App-->>LB: 7. Response
+    LB-->>User: 8. Return
+```
 
-### 7. Monitoring Layer
-- **CloudWatch**: Metrics, logs, alarms
-- **X-Ray**: Distributed tracing
-- **CloudWatch Dashboard**: Operational visibility
+## 5. Auto-Scaling
 
-## Key Design Decisions
+```mermaid
+graph TB
+    subgraph Metrics
+        CPU[CPU Utilization<br/>>70%]
+        Memory[Memory Usage<br/>>80%]
+    end
+    
+    subgraph Auto Scaling
+        ASG[Auto Scaling Group<br/>Min: 2, Max: 10]
+        ScaleOut[Scale Out<br/>+1 Instance]
+        ScaleIn[Scale In<br/>-1 Instance]
+    end
+    
+    CPU --> ScaleOut
+    Memory --> ScaleOut
+    ScaleOut --> ASG
+    ScaleIn --> ASG
+```
 
-### Why ECS Fargate?
-- **Serverless containers**: No EC2 management
-- **Flexible**: Any language/framework
-- **Scalable**: Auto-scaling built-in
-- **Cost**: Pay per task, not per instance
+## 6. Monitoring & Alerts
 
-### Why Aurora MySQL?
-- **Performance**: 5x faster than MySQL
-- **Scalability**: Read replicas for scaling
-- **HA**: Multi-AZ automatic failover
-- **Managed**: Automated backups, patching
+```mermaid
+graph LR
+    subgraph Resources
+        EC2[EC2 Instances]
+        RDS[RDS Database]
+        ALB[Load Balancer]
+    end
+    
+    subgraph CloudWatch
+        Metrics[Metrics]
+        Logs[Logs]
+        Alarms[Alarms]
+    end
+    
+    subgraph Notifications
+        SNS[SNS Topic]
+        Email[Email Alerts]
+    end
+    
+    EC2 --> Metrics
+    RDS --> Metrics
+    ALB --> Metrics
+    
+    EC2 --> Logs
+    Metrics --> Alarms
+    Alarms --> SNS
+    SNS --> Email
+```
 
-### Why OpenSearch?
-- **Geospatial**: Native geo-queries
-- **Full-text**: Property description search
-- **Faceted**: Filter by price, location, type
-- **Scalable**: Horizontal scaling
+## 7. Deployment Flow
 
-### Why DynamoDB?
-- **Fast**: Single-digit ms latency
-- **Scalable**: Unlimited throughput
-- **Serverless**: Pay per request
-- **Perfect for**: User data, sessions
+```mermaid
+graph LR
+    A[Source Code] --> B[Build]
+    B --> C[Test]
+    C --> D[Package]
+    D --> E[Deploy Dev]
+    E --> F[Deploy Staging]
+    F --> G[Deploy Production]
+```
 
-### Why ElastiCache Redis?
-- **Performance**: Sub-ms latency
-- **Geospatial**: GEORADIUS for proximity
-- **Sessions**: Shared across ECS tasks
-- **Caching**: Search results, queries
+## 8. Cost Distribution
 
-## Data Flow
+```mermaid
+pie title Monthly Cost Breakdown
+    "EC2 Instances" : 40
+    "RDS Database" : 30
+    "Load Balancer" : 15
+    "S3 Storage" : 5
+    "Data Transfer" : 5
+    "CloudWatch" : 5
+```
 
-### Property Search
-1. User searches on frontend
-2. Query hits ElastiCache (cache)
-3. If miss, query OpenSearch
-4. Results cached for 5 minutes
-5. Return to user (<100ms)
+---
 
-### Property Listing
-1. Agent uploads via API Gateway
-2. Lambda processes images
-3. Store in S3, metadata in Aurora
-4. Index in OpenSearch
-5. Invalidate cache
+## Key Features
 
-### User Authentication
-1. Login via Cognito
-2. JWT token returned
-3. API Gateway validates token
-4. Access application resources
+- **High Availability**: Multi-AZ deployment
+- **Auto Scaling**: Based on metrics
+- **Security**: WAF, Security Groups, Encryption
+- **Monitoring**: CloudWatch metrics and alarms
+- **Cost Optimized**: Right-sized resources
 
-## Scalability
+---
 
-### Horizontal Scaling
-- **ECS Tasks**: 2 → 20 tasks
-- **Aurora**: Read replicas (up to 15)
-- **OpenSearch**: Add nodes
-- **Lambda**: Automatic
-
-### Vertical Scaling
-- **ECS**: Larger task sizes
-- **Aurora**: Larger instances
-- **ElastiCache**: Larger nodes
-- **OpenSearch**: Larger nodes
-
-### Geographic Scaling
-- **CloudFront**: Global CDN
-- **Aurora**: Global database
-- **Multi-region**: Future expansion
-
-## High Availability
-
-- **Multi-AZ**: All services
-- **Auto-healing**: ECS task replacement
-- **Failover**: Aurora automatic
-- **Redundancy**: Multiple AZs
-
-## Security
-
-- **WAF**: Application firewall
-- **Security Groups**: Network isolation
-- **IAM**: Least privilege
-- **Encryption**: All data (KMS)
-- **Cognito**: User authentication
-- **Private Subnets**: Database isolation
-
-## Cost Optimization
-
-- **Fargate Spot**: 70% savings (non-critical tasks)
-- **Aurora Serverless**: Auto-pause
-- **ElastiCache reserved**: 30% savings
-- **S3 Intelligent-Tiering**: Auto-optimize
-- **CloudFront**: Cache everything
-
-## Performance Optimization
-
-- **Caching**: Redis + CloudFront
-- **Read replicas**: Distribute queries
-- **OpenSearch**: Fast search
-- **Lambda**: Parallel processing
-- **CDN**: Global delivery
-
-## Monitoring
-
-- **CloudWatch**: All metrics
-- **Alarms**: Auto-scaling triggers
-- **Dashboards**: Operational view
-- **X-Ray**: Request tracing
-- **Logs**: Centralized logging
-
-See [README](README.md) for full details.
+**Author**: Rahul Ladumor  
+**License**: MIT 2025
